@@ -23,14 +23,20 @@ int server_setup() {
   int WKP_fd = open(WKP, O_RDONLY, 0);
   if (WKP_fd == -1) { error("server_setup open WKP"); }
 
-  int x;
-  if (read(WKP_fd, &x, sizeof(x)) == -1) { error("read from WKP"); }
+  int client_pid;
+  if (read(WKP_fd, &client_pid, sizeof(client_pid)) == -1) { error("read from WKP"); }
 
-  printf("read x from WKP: %d\n", x);
+  printf("read client_pid from WKP: %d\n", client_pid);
 
+  printf("removing WKP\n");
   if (remove(WKP) != 0) { error("remove WKP"); }
 
-  int from_client = 0;
+  printf("creating PP\n");
+  char private_pipe_name[BUFFER_SIZE];
+  sprintf(private_pipe_name, "%d", client_pid);
+
+  int from_client = open(private_pipe_name, 0666, 0);
+  int from_client = server_handshake()
   return from_client;
 }
 
