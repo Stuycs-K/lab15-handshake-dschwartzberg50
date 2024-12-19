@@ -1,7 +1,6 @@
 #include "pipe_networking.h"
 
 int main() {
-  server_setup();
   int to_client;
   int from_client;
 
