@@ -88,11 +88,7 @@ int server_handshake(int *to_client) {
   returns the file descriptor for the downstream pipe.
   =========================*/
 int client_handshake(int *to_server) {
-  int WKP_read_fd = open(WKP, O_WRONLY, 0);
-  if (WKP_read_fd == -1) { error("client_handshake open WKP read"); }
-
   int pid = getpid();
-  if (write(WKP_read_fd, &pid, sizeof(pid)) == -1) { error("client write to WKP"); }
 
   printf("creating PP pid=%d\n", pid);
   char private_pipe_name[BUFFER_SIZE];
@@ -101,6 +97,11 @@ int client_handshake(int *to_server) {
 
   int private_pipe_fd = open(private_pipe_name, O_RDONLY, 0);
   if (private_pipe_fd == -1) { error("open private_pipe_fd"); }
+
+  if (write(private_pipe_fd, &pid, sizeof(pid)) == -1) { error("client write to private_pipe_fd"); }
+
+  int WKP_read_fd = open(WKP, O_RDONLY, 0);
+  if (WKP_read_fd == -1) { error("client_handshake open WKP read"); }
 
   unsigned int x;
   if (read(WKP_read_fd, &x, sizeof(x)) == -1) { error("read from WKP_read_fd"); }
