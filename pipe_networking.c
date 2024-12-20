@@ -18,11 +18,13 @@ void error(char *message) {
   returns the file descriptor for the upstream pipe.
   =========================*/
 int server_setup() {
-  if (mkfifo(WKP, 0666) == -1) { error("mkfifo"); }
+  if (mkfifo(WKP, 0666) == -1) { error("mkfifo WKP"); }
 
+  printf("!!!\n");
   int WKP_fd = open(WKP, O_RDONLY, 0);
   if (WKP_fd == -1) { error("server_setup open WKP"); }
 
+  printf("waiting for message 1 from client\n"); fflush(stdout);
   int client_pid;
   if (read(WKP_fd, &client_pid, sizeof(client_pid)) == -1) { error("read from WKP"); }
 
@@ -31,12 +33,10 @@ int server_setup() {
   printf("removing WKP\n");
   if (remove(WKP) != 0) { error("remove WKP"); }
 
-  printf("creating PP\n");
   char private_pipe_name[BUFFER_SIZE];
   sprintf(private_pipe_name, "%d", client_pid);
 
   int from_client = open(private_pipe_name, 0666, 0);
-  int from_client = server_handshake()
   return from_client;
 }
 
@@ -50,7 +50,10 @@ int server_setup() {
   returns the file descriptor for the upstream pipe (see server setup).
   =========================*/
 int server_handshake(int *to_client) {
-  int from_client;
+  int from_client = server_setup();
+  // reach here -> WKP removed, PP is set up
+  // now create
+
   return from_client;
 }
 
@@ -68,8 +71,16 @@ int client_handshake(int *to_server) {
   int WKP_fd = open(WKP, O_WRONLY, 0);
   if (WKP_fd == -1) { error("client_handshake open WKP"); }
 
-  int num = 123;
-  if (write(WKP_fd, &num, sizeof(num)) == -1) { error("write to WKP"); }
+  int pid = getpid();
+  if (write(WKP_fd, &pid, sizeof(pid)) == -1) { error("write to WKP"); }
+
+  printf("creating PP pid=%d\n", pid);
+  char private_pipe_name[BUFFER_SIZE];
+  sprintf(private_pipe_name, "%d", pid);
+  if (mkfifo(private_pipe_name, 0666) == -1) { error("mkfifo private pipe"); }
+
+
+
 
   int from_server;
   return from_server;
