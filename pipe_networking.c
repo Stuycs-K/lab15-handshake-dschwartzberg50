@@ -17,27 +17,14 @@ void error(char *message) {
 
   returns the file descriptor for the upstream pipe.
   =========================*/
-int WKP_fd;
 int server_setup() {
   if (mkfifo(WKP, 0666) == -1) { error("mkfifo WKP"); }
 
-  printf("!!!\n");
-  WKP_fd = open(WKP, O_RDONLY, 0);
-  if (WKP_fd == -1) { error("server_setup open WKP"); }
+  int from_client = open(WKP, O_RDONLY);
+  if (from_client == -1) { error("server_setup open WKP"); }
 
-  printf("waiting for message 1 from client\n"); fflush(stdout);
-  int client_pid;
-  if (read(WKP_fd, &client_pid, sizeof(client_pid)) == -1) { error("read from WKP"); }
+  if (remove(WKP) != 0) { error("server_setup remove WKP"); }
 
-  printf("read client_pid from WKP: %d\n", client_pid);
-
-  printf("removing WKP\n");
-  if (remove(WKP) != 0) { error("remove WKP"); }
-
-  char private_pipe_name[BUFFER_SIZE];
-  sprintf(private_pipe_name, "%d", client_pid);
-
-  int from_client = open(private_pipe_name, 0666, 0);
   return from_client;
 }
 
@@ -53,14 +40,22 @@ int server_setup() {
 int server_handshake(int *to_client) {
   int from_client = server_setup();
 
+  int client_pid;
+  if (read(from_client, &client_pid, sizeof(client_pid)) == -1) { error("server_handshake reading from from_client"); }
+
+  char private_pipe_name[BUFFER_SIZE];
+  sprintf(private_pipe_name, "%d", client_pid);
+
   int random_fd = open("/dev/urandom", O_RDONLY, 0);
-	if (random_fd == -1) { error("open random_fd"); }
+  if (random_fd == -1) { error("open random_fd"); }
 
   unsigned int x, x2;
-  if (read(random_fd, &x, sizeof(x)) == -1) { error("read from random_fd"); }
+  if (read(random_fd, &x, sizeof(x)) == -1) { error("server_handshake read from random_fd"); }
+
+  *to_client = open(private_pipe_name, O_WRONLY);
 
   // send random number to client
-  if (write(WKP_fd, &x, sizeof(x)) == -1) { error("server write to WKP"); }
+  if (write(*to_client, &x, sizeof(x)) == -1) { error("server write to WKP"); }
 
   if (read(from_client, &x2, sizeof(x2)) == -1) { error("read from from_client"); }
 
@@ -71,8 +66,6 @@ int server_handshake(int *to_client) {
   } else {
     printf("client is good!\n");
   }
-
-  *to_client = WKP_fd;
 
   return from_client;
 }
@@ -90,18 +83,19 @@ int server_handshake(int *to_client) {
 int client_handshake(int *to_server) {
   int pid = getpid();
 
-  printf("creating PP pid=%d\n", pid);
   char private_pipe_name[BUFFER_SIZE];
   sprintf(private_pipe_name, "%d", pid);
   if (mkfifo(private_pipe_name, 0666) == -1) { error("mkfifo private pipe"); }
 
+  *to_server = open(WKP, O_WRONLY);
+   if (WKP_read_fd == -1) { error("client_handshake open WKP read"); }
+
+  
   int private_pipe_fd = open(private_pipe_name, O_RDONLY, 0);
   if (private_pipe_fd == -1) { error("open private_pipe_fd"); }
 
   if (write(private_pipe_fd, &pid, sizeof(pid)) == -1) { error("client write to private_pipe_fd"); }
 
-  int WKP_read_fd = open(WKP, O_RDONLY, 0);
-  if (WKP_read_fd == -1) { error("client_handshake open WKP read"); }
 
   unsigned int x;
   if (read(WKP_read_fd, &x, sizeof(x)) == -1) { error("read from WKP_read_fd"); }
