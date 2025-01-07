@@ -79,15 +79,29 @@ int client_handshake(int *to_server) {
   return from_server;
 }
 
-/*=========================
-  server_connect
-  args: int from_client
-
-  handles the subserver portion of the 3 way handshake
-
-  returns the file descriptor for the downstream pipe.
-  =========================*/
-int server_connect(int from_client) {
-  int to_client  = 0;
-  return to_client;
+// copied from server_handshake except removed server_setup
+void server_handshake_half(int *to_client, int from_client) {
+	// receive the name of the private pipe, the client's pid
+	int syn;
+	if (read(from_client, &syn, sizeof(syn)) == -1) { error("server_handshake: read from_client"); }
+  char private_pipe_name[BUFFER_SIZE];
+  sprintf(private_pipe_name, "%d", syn);
+	
+	// generate a random integer to send to client
+	int random_fd = open("/dev/urandom", O_RDONLY);
+	if (random_fd == -1) { error("server_handshake: open /dev/urandom"); }
+	unsigned int syn_ack, ack;
+	if (read(random_fd, &syn_ack, sizeof(syn_ack)) == -1) { error("server_handshake: read random_fd"); }
+	
+	// send SYN_ACK (random int)
+  *to_client = open(private_pipe_name, O_WRONLY);
+	if (*to_client == -1) { error("server_handshake: open private pipe"); }
+	if (write(*to_client, &syn_ack, sizeof(syn_ack)) == -1) { error("server_handshake: write to_client"); }
+	
+	// ensure that ACK == SYN_ACK + 1
+	if (read(from_client, &ack, sizeof(ack)) == -1) { error("server_handshake: read from_client"); }
+	if (ack != syn_ack + 1) {
+		printf("client send back syn_ack=%d, expected ack=%d + 1", syn_ack, ack);
+    exit(1);
+  }
 }
