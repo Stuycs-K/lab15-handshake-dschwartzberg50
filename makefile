@@ -1,19 +1,16 @@
-all: client server
-client: basic_client.o pipe_networking.o
-	@gcc -o client basic_client.o pipe_networking.o
-
-server: basic_server.o pipe_networking.o
-	@gcc -o server basic_server.o pipe_networking.o
-
-basic_client.o: basic_client.c pipe_networking.h
-	@gcc -c basic_client.c
-
+.PHONY: compile server client clean
+server: server.out
+	@./server.out
+client: client.out
+	@./client.out
+compile server.out client.out: basic_client.o basic_server.o pipe_networking.o
+	@gcc -o server.out basic_server.o pipe_networking.o
+	@gcc -o client.out basic_client.o pipe_networking.o
 basic_server.o: basic_server.c pipe_networking.h
 	@gcc -c basic_server.c
-
-pipe_networking.o: pipe_networking.c pipe_networking.h
+basic_client.o: basic_client.c pipe_networking.h
+	@gcc -c basic_client.c
+pipe_networking.o: pipe_networking.h
 	@gcc -c pipe_networking.c
-
 clean:
-	rm *.o
-	rm *~
+	rm -f *.o mario
