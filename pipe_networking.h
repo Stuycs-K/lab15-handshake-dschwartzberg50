@@ -35,4 +35,6 @@ int server_setup();
 // int multi_server_setup();
 // int multi_server_connect(int from_client, struct message m);
 
+void error(char *message);
+
 #endif
