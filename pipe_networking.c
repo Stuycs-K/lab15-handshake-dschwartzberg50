@@ -1,7 +1,7 @@
 #include "pipe_networking.h"
 
-char error_string[256];
 void error(char *message) {
+	char error_string[256];
   sprintf(error_string, "%s: errno %d", message, errno);
   perror(error_string);
   exit(1);
