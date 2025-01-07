@@ -6,7 +6,6 @@
 int main() {
 	int to_server, from_server;
 	from_server = client_handshake( &to_server );
-	printf("client completed handshake\n");
 	
 	unsigned int message;
 	while (1) {
