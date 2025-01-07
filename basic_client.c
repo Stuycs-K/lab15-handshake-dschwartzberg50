@@ -8,12 +8,10 @@ int main() {
 	from_server = client_handshake( &to_server );
 	printf("client completed handshake\n");
 	
-	int message;
-	if (read(from_server, &message, sizeof(message)) == -1) {
-		error("client: read from server");
-		exit(1);
+	unsigned int message;
+	while (1) {
+		if (read(from_server, &message, sizeof(message)) == -1) { error("client: read from server"); }
+		
+		printf("message: %d\n", message);
 	}
-	
-	printf("(client) message is: %d\n", message);
-	
 }
