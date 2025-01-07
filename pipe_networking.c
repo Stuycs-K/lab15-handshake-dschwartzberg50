@@ -1,6 +1,4 @@
 #include "pipe_networking.h"
-//UPSTREAM = to the server / from the client
-//DOWNSTREAM = to the client / from the server
 
 char error_string[256];
 void error(char *message) {
@@ -9,74 +7,42 @@ void error(char *message) {
   exit(1);
 }
 
-/*=========================
-  server_setup
-
-  creates the WKP and opens it, waiting for a  connection.
-  removes the WKP once a connection has been made
-
-  returns the file descriptor for the upstream pipe.
-  =========================*/
 int server_setup() {
-  if (mkfifo(WKP, 0666) == -1) { error("mkfifo WKP"); }
+	if (mkfifo(WKP, 0666) == -1) { error("server_setup: mkfifo WKP"); }
 	
-	printf("wkp creating, waiting\n");
-
   int from_client = open(WKP, O_RDONLY);
-  if (from_client == -1) { error("server_setup open WKP"); }
+	if (from_client == -1) { error("server_setup: open WKP"); }
 	
-	printf("from_client has been opened\n");
-
-  if (remove(WKP) != 0) { error("server_setup remove WKP"); }
+	if (remove(WKP) != 0) { error("server_setup: remove WKP"); }
 
   return from_client;
 }
 
-/*=========================
-  server_handshake
-  args: int * to_client
-
-  Performs the server side pipe 3 way handshake.
-  Sets *to_client to the file descriptor to the downstream pipe (Client's private pipe).
-
-  returns the file descriptor for the upstream pipe (see server setup).
-  =========================*/
 int server_handshake(int *to_client) {
   int from_client = server_setup();
-	printf("from_client is : %d\n", from_client);
 
-  int client_pid;
-  if (read(from_client, &client_pid, sizeof(client_pid)) == -1) { error("server_handshake reading from from_client"); }
+	int syn;
+	if (read(from_client, &syn, sizeof(syn)) == -1) { error("server_handshake: read from_client"); }
 	
-	printf("client_pid is : %d\n", client_pid);
-
   char private_pipe_name[BUFFER_SIZE];
-  sprintf(private_pipe_name, "%d", client_pid);
+  sprintf(private_pipe_name, "%d", syn);
 
 	int random_fd = open("/dev/urandom", O_RDONLY);
-  if (random_fd == -1) { error("open random_fd"); }
+	if (random_fd == -1) { error("server_handshake: open /dev/urandom"); }
 
-  unsigned int x, x2;
-  if (read(random_fd, &x, sizeof(x)) == -1) { error("server_handshake read from random_fd"); }
-	printf("random int x is : %d\n", x);
+	unsigned int syn_ack, ack;
+	if (read(random_fd, &syn_ack, sizeof(syn_ack)) == -1) { error("server_handshake: read random_fd"); }
 
   *to_client = open(private_pipe_name, O_WRONLY);
-	if (*to_client == -1) { error("server_handshake open to_client"); }
+	if (*to_client == -1) { error("server_handshake: open private pipe"); }
 	
-	printf("to_client: %p; *to_client: %d\n", to_client, *to_client);
+	if (write(*to_client, &syn_ack, sizeof(syn_ack)) == -1) { error("server_handshake: write to_client"); }
+	
+	if (read(from_client, &ack, sizeof(ack)) == -1) { error("server_handshake: read from_client"); }
 
-  // send random number to client
-  if (write(*to_client, &x, sizeof(x)) == -1) { error("server write to WKP"); }
-
-	// read back from client to check if it's x+1
-  if (read(from_client, &x2, sizeof(x2)) == -1) { error("read from from_client"); }
-
-  printf("client returned x2=%d, expected %d\n", x2, x+1);
-  if (x2 != x + 1) {
-    printf("client did not return correct x\n");
+	if (ack != syn_ack + 1) {
+		printf("client send back syn_ack=%d, expected ack=%d + 1", syn_ack, ack);
     exit(1);
-  } else {
-    printf("client is good!\n");
   }
 
   return from_client;
@@ -110,6 +76,9 @@ int client_handshake(int *to_server) {
 	printf("client about to open from_server\n");
 	int from_server = open(private_pipe_name, O_RDONLY);
 	if (from_server == -1) { error("client_handshake open from_server"); }
+	
+	printf("client about to remove %s\n", private_pipe_name);
+	if (remove(private_pipe_name) != 0) { error("client_handshake: remove private pipe"); }
 
   unsigned int x;
 	if (read(from_server, &x, sizeof(x)) == -1) { error("client_handshake read from from_server"); }
