@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
+#include <signal.h>
 #include "pipe_networking.h"
 
 static void handle_sigpipe(int signal) {
@@ -9,7 +10,7 @@ static void handle_sigpipe(int signal) {
 }
 
 static void handle_sigint(int signal) {
-	if (remove(WKP) != 0) { error("server: remove WKP"); }
+	remove(WKP); // the WKP may or may not exist when sigint is intercepted
 	exit(0);
 }
 
@@ -35,7 +36,7 @@ int main() {
 	server_handshake_half(&to_client, from_client);
 	while (1) {
 		if (read(random_fd, &x, sizeof(x)) == -1) { error("subserver: read from random_fd"); }
-		x %= 100;
+		x %= 1000;
 		
 		sprintf(message, "this is a message from subserver pid=%d: %u", getpid(), x);
 		

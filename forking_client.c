@@ -9,7 +9,7 @@ int main() {
 	from_server = client_handshake(&to_server);
 	
 	char message[BUFFER_SIZE];
-	char last_message[BUFFER_SIZE]; last_message[0] = '\0'; // bad solution 
+	char last_message[BUFFER_SIZE]; last_message[0] = '\0'; // bad solution: this is so the client doesn't repeatedly say the same message if the server is closed before the client
 	while (1) {
 		if (read(from_server, &message, sizeof(message)) == -1) { error("client: read from server"); }
 		
