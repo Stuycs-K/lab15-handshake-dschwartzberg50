@@ -19,7 +19,8 @@ int main() {
 	
 	int to_client, from_client;
 	int random_fd = open("/dev/urandom", O_RDONLY);
-	unsigned int message;
+	unsigned int x;
+	char message[BUFFER_SIZE];
 	
 	while (1) {
 		from_client = server_setup();
@@ -33,9 +34,10 @@ int main() {
 	// only the forked children can be here
 	server_handshake_half(&to_client, from_client);
 	while (1) {
-		if (read(random_fd, &message, sizeof(message)) == -1) { error("subserver: read from random_fd"); }
+		if (read(random_fd, &x, sizeof(x)) == -1) { error("subserver: read from random_fd"); }
+		x %= 100;
 		
-		message %= 100;
+		sprintf(message, "this is a message from subserver pid=%d: %u", getpid(), x);
 		
 		int bytes = write(to_client, &message, sizeof(message));
 		if (bytes == -1 && errno == EPIPE) {
